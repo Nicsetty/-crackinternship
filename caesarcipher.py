@@ -1,51 +1,101 @@
-def caesar_cipher_encrypt(text, shift):
-    encrypted_text = ""
-    
-    for char in text:
-        if char.isalpha():  # Check if the character is a letter
-            shift_amount = shift % 26
-            char_code = ord(char)
-            
-            if char.isupper():
-                base = ord('A')
-                encrypted_char = chr((char_code - base + shift_amount) % 26 + base)
-            else:
-                base = ord('a')
-                encrypted_char = chr((char_code - base + shift_amount) % 26 + base)
-        else:
-            encrypted_char = char  # Non-alphabet characters remain unchanged
+import tkinter as tk
+from tkinter import filedialog, messagebox
+from PIL import Image, ImageTk, ImageOps
 
-        encrypted_text += encrypted_char
-    
-    return encrypted_text
+def encrypt_image(image, key):
+    """Encrypt the image by adding the key to each pixel value."""
+    encrypted_image = Image.new('RGB', image.size)
+    pixels = encrypted_image.load()
+    original_pixels = image.load()
 
+    for x in range(image.width):
+        for y in range(image.height):
+            r, g, b = original_pixels[x, y]
+            r = (r + key) % 256
+            g = (g + key) % 256
+            b = (b + key) % 256
+            pixels[x, y] = (r, g, b)
+    return encrypted_image
 
-def caesar_cipher_decrypt(text, shift):
-    return caesar_cipher_encrypt(text, -shift)
+def decrypt_image(image, key):
+    """Decrypt the image by subtracting the key from each pixel value."""
+    decrypted_image = Image.new('RGB', image.size)
+    pixels = decrypted_image.load()
+    original_pixels = image.load()
 
+    for x in range(image.width):
+        for y in range(image.height):
+            r, g, b = original_pixels[x, y]
+            r = (r - key) % 256
+            g = (g - key) % 256
+            b = (b - key) % 256
+            pixels[x, y] = (r, g, b)
+    return decrypted_image
 
-def main():
-    print("Caesar Cipher Encryption/Decryption")
-    choice = input("Would you like to (E)ncrypt or (D)ecrypt a message? ").strip().upper()
-
-    if choice not in ['E', 'D']:
-        print("Invalid choice. Please enter 'E' for encryption or 'D' for decryption.")
+def open_image():
+    """Open an image file and display it."""
+    file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")])
+    if not file_path:
         return
 
-    message = input("Enter your message: ").strip()
+    global image, original_image
+    image = Image.open(file_path)
+    original_image = image.copy()
+
+    image_tk = ImageTk.PhotoImage(image)
+    image_label.config(image=image_tk)
+    image_label.image = image_tk
+
+def save_image(img, title):
+    """Save the processed image to a file."""
+    file_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png"), ("JPEG files", "*.jpg")], title=title)
+    if file_path:
+        img.save(file_path)
+
+def encrypt():
+    """Encrypt the image and display it."""
     try:
-        shift = int(input("Enter the shift value (an integer): ").strip())
+        key = int(key_entry.get())
+        encrypted_img = encrypt_image(original_image, key)
+        image_tk = ImageTk.PhotoImage(encrypted_img)
+        image_label.config(image=image_tk)
+        image_label.image = image_tk
+        save_image(encrypted_img, "Save Encrypted Image As")
     except ValueError:
-        print("Invalid shift value. Please enter an integer.")
-        return
+        messagebox.showerror("Invalid Input", "Please enter a valid integer for the key.")
 
-    if choice == 'E':
-        encrypted_message = caesar_cipher_encrypt(message, shift)
-        print(f"Encrypted Message: {encrypted_message}")
-    else:
-        decrypted_message = caesar_cipher_decrypt(message, shift)
-        print(f"Decrypted Message: {decrypted_message}")
+def decrypt():
+    """Decrypt the image and display it."""
+    try:
+        key = int(key_entry.get())
+        decrypted_img = decrypt_image(image, key)
+        image_tk = ImageTk.PhotoImage(decrypted_img)
+        image_label.config(image=image_tk)
+        image_label.image = image_tk
+        save_image(decrypted_img, "Save Decrypted Image As")
+    except ValueError:
+        messagebox.showerror("Invalid Input", "Please enter a valid integer for the key.")
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {e}")
 
+# Create the main window
+root = tk.Tk()
+root.title("Simple Image Encryption Tool")
 
-if __name__ == "__main__":
-    main()
+# Create and place widgets
+tk.Button(root, text="Open Image", command=open_image).pack(pady=10)
+tk.Label(root, text="Enter Key:").pack(pady=5)
+key_entry = tk.Entry(root)
+key_entry.pack(pady=5)
+
+encrypt_button = tk.Button(root, text="Encrypt", command=encrypt)
+encrypt_button.pack(side=tk.LEFT, padx=20, pady=10)
+
+decrypt_button = tk.Button(root, text="Decrypt", command=decrypt)
+decrypt_button.pack(side=tk.RIGHT, padx=20, pady=10)
+
+image_label = tk.Label(root)
+image_label.pack(pady=10)
+
+# Run the application
+root.mainloop()
